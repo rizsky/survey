@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+//DB gorm
 var DB *gorm.DB
 
 //DBconfig :nodoc:

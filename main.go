@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 
-	"to_do_list/db"
-	"to_do_list/module/todo/models"
-	"to_do_list/module/todo/routes"
+	"soal_nomor_2/db"
+	handler "soal_nomor_2/module/survey/handlers"
+	"soal_nomor_2/module/survey/models"
+	repo "soal_nomor_2/module/survey/repositories"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
 
@@ -17,9 +19,25 @@ func main() {
 	if err != nil {
 		fmt.Println("status: ", err)
 	}
+	db.DB.AutoMigrate(&models.Answer{}, &models.Survey{}, &models.Result{}, &models.Question{})
+
+	sr := repo.NewSurveyRepository(db.DB)
+	controller := handler.NewSurveyHandler(sr)
+
 	defer db.DB.Close()
-	db.DB.AutoMigrate(&models.ToDo{}, &models.Users{})
-	r := routes.SetupRouter()
+
+	r := gin.Default()
+	v1 := r.Group("/v1")
+	{
+		v1.GET("survey", controller.GetAllSurvey)
+		v1.GET("survey/:id", controller.GetASurvey)
+		v1.GET("result", controller.GetAnswer)
+		v1.PUT("survey/:id", controller.EditSurvey)
+		v1.DELETE("survey/:id", controller.DeleteSurvey)
+		v1.POST("survey", controller.CreateSurvey)
+		v1.POST("submit", controller.PostSubmit)
+	}
+
 	//running server
 	r.Run()
 }
