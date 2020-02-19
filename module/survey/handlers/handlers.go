@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"soal_nomor_2/module/survey/models"
 	"soal_nomor_2/module/survey/repositories"
+
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,91 +24,105 @@ func NewSurveyHandler(re repositories.Repository) *Handler {
 
 // GetAllSurvey :nodoc:
 func (repo *Handler) GetAllSurvey(c *gin.Context) {
-	todo, err := repo.survey.GetAllSurveyRepo()
+	surveys, err := repo.survey.GetAllSurveyRepo()
 	if err != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 	} else {
-		c.JSON(http.StatusOK, todo)
+		c.JSON(http.StatusOK, surveys)
 	}
 }
 
 // GetAnswer :nodoc:
 func (repo *Handler) GetAnswer(c *gin.Context) {
-	_ = c.Params.ByName("id")
-	todo, err := repo.survey.GetAnswerRepo()
+	idURL := c.Params.ByName("id")
+	id, _ := strconv.Atoi(idURL)
+	survey, err := repo.survey.GetAnswerRepo(uint(id))
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+	}
+	var data []SubmissionAnswerResponse
+	for _, answer := range survey {
+		data = append(data, SubmissionAnswerResponse{
+			UserName: answer.Result.UserName,
+			Question: answer.Question.Question,
+			Answer:   answer.Answer,
+		})
+	}
+
 	if err != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 	} else {
-		c.JSON(http.StatusOK, todo)
+		c.JSON(http.StatusOK, data)
 	}
 }
 
 // PostSubmit :nodoc:
 func (repo *Handler) PostSubmit(c *gin.Context) {
-	_ = c.Params.ByName("id")
-	todo, err := repo.survey.PostSubmitRepo(models.Answer{})
+	var requestData SubmitSubmissionRequest
+	id := c.Params.ByName("id")
+	survey, err := repo.survey.GetASurveyRepo(id)
+	if err != nil {
+		c.AbortWithStatus(http.StatusNotFound)
+	}
+	err = c.BindJSON(&requestData)
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		return
+	}
+
+	var answers []models.Answer
+	for _, answerData := range requestData.Answers {
+		answers = append(answers, models.Answer{
+			QuestionID: answerData.QuestionID,
+			Answer:     answerData.Answer,
+		})
+	}
+
+	result, err := repo.survey.PostSubmitRepo(survey.ID, requestData.User, answers)
 	if err != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 	} else {
-		c.JSON(http.StatusOK, todo)
+		c.JSON(http.StatusOK, result)
 	}
 }
 
 // GetASurvey :nodoc:
 func (repo *Handler) GetASurvey(c *gin.Context) {
 	id := c.Params.ByName("id")
-	todo, err := repo.survey.GetASurveyRepo(id)
+	survey, err := repo.survey.GetASurveyRepo(id)
 	if err != nil {
 		c.AbortWithStatus(http.StatusNotFound)
 	} else {
-		c.JSON(http.StatusOK, todo)
+		c.JSON(http.StatusOK, survey)
 	}
 }
 
 // CreateSurvey :nodoc:
 func (repo *Handler) CreateSurvey(c *gin.Context) {
-	var todo models.Survey
-	requestPayload := make(map[string]interface{})
-
-	err := c.BindJSON(&requestPayload)
+	var (
+		request CreateSurveyRequest
+		survey  models.Survey
+	)
+	err := c.BindJSON(&request)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 		return
 	}
-
-	fmt.Println(requestPayload)
-	todo, err = repo.survey.CreateSurveyRepo("test")
+	survey, err = repo.survey.CreateSurveyRepo(request.Name, request.Questions)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, err)
 	} else {
-		c.JSON(http.StatusOK, todo)
+		c.JSON(http.StatusOK, survey)
 	}
 
 }
 
-// EditSurvey :nodoc:
-func (repo *Handler) EditSurvey(c *gin.Context) {
-	// var todo models.Survey
-	// id := c.Params.ByName("id")
-	// todo, err := repo.survey.EditSurveyRepo(id)
-	// if err != nil {
-	// 	c.AbortWithError(http.StatusNotFound, err)
-	// 	return
-	// }
-	// c.BindJSON(&todo)
-	// todo, err = repo.survey.UpdateSurveyRepo(todo, id)
-	// if err != nil {
-	// 	c.AbortWithStatus(http.StatusNotFound)
-	// } else {
-	// 	c.JSON(http.StatusOK, todo)
-	// }
-}
-
 // DeleteSurvey :nodoc:
 func (repo *Handler) DeleteSurvey(c *gin.Context) {
-	var todo models.Survey
+	var survey models.Survey
 	id := c.Params.ByName("id")
-	todo, err := repo.survey.DeleteSurveyRepo(todo, id)
+	survey, err := repo.survey.DeleteSurveyRepo(survey, id)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, err)
 	} else {

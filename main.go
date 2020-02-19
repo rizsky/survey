@@ -31,11 +31,10 @@ func main() {
 	{
 		v1.GET("survey", controller.GetAllSurvey)
 		v1.GET("survey/:id", controller.GetASurvey)
-		v1.GET("result", controller.GetAnswer)
-		v1.PUT("survey/:id", controller.EditSurvey)
+		v1.GET("result/:id", controller.GetAnswer)
 		v1.DELETE("survey/:id", controller.DeleteSurvey)
 		v1.POST("survey", controller.CreateSurvey)
-		v1.POST("submit", controller.PostSubmit)
+		v1.POST("submit/:id", controller.PostSubmit)
 	}
 
 	//running server

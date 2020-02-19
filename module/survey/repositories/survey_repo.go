@@ -22,52 +22,67 @@ func NewSurveyRepository(db *gorm.DB) Repository {
 //GetAllSurvey dapetin semua survey
 func (repo *surveyRepo) GetAllSurveyRepo() ([]models.Survey, error) {
 	var survey []models.Survey
-	if err := repo.DB.Find(&survey).Error; err != nil {
+	if err := repo.DB.Preload("Question").Find(&survey).Error; err != nil {
 		return nil, err
 	}
+
 	return survey, nil
 }
 
 //GetAnswer get all question based on survey
-func (repo *surveyRepo) GetAnswerRepo() ([]models.Answer, error) {
-	var survey []models.Answer
-	if err := repo.DB.Find(&survey).Error; err != nil {
-		return nil, err
+func (repo *surveyRepo) GetAnswerRepo(id uint) ([]models.Answer, error) {
+	var answer []models.Result
+	repo.DB.Preload("Answers").Preload("Answers.Result").Preload("Answers.Question").Find(&answer)
+
+	var submitAnswer []models.Answer
+	for _, submit := range answer {
+		submitAnswer = append(submitAnswer, submit.Answers...)
 	}
-	return survey, nil
+
+	return submitAnswer, nil
 }
 
 //PostSubmit is function for buat bro
-func (repo *surveyRepo) PostSubmitRepo(Answer models.Answer) (models.Answer, error) {
-	if err := repo.DB.Create(&Answer).Error; err != nil {
-		return models.Answer{}, err
+func (repo *surveyRepo) PostSubmitRepo(surveyID uint, user string, answers []models.Answer) (models.Result, error) {
+	data := models.Result{
+		SurveyID: surveyID,
+		UserName: user,
+		Answers:  answers,
 	}
-	return Answer, nil
+
+	if err := repo.DB.Debug().Save(&data).Error; err != nil {
+		return models.Result{}, err
+	}
+	return data, nil
 }
 
 //CreateSurvey :nodoc:
-func (repo *surveyRepo) CreateSurveyRepo(id string) (models.Survey, error) {
-	var data models.Survey
-	if err := repo.DB.Where("id = ?", id).First(&data).Error; err != nil {
-		fmt.Println(err)
+func (repo *surveyRepo) CreateSurveyRepo(title string, questions []string) (models.Survey, error) {
+	var setquestions []models.Question
+	for _, question := range questions {
+		setquestions = append(setquestions, models.Question{
+			Question: question,
+		})
+	}
+
+	survey := models.Survey{
+		Title:    title,
+		Question: setquestions,
+	}
+
+	if err := repo.DB.Save(&survey).Error; err != nil {
 		return models.Survey{}, err
 	}
-	return data, nil
+	return survey, nil
 }
 
 //GetASurvey :nodoc:
 func (repo *surveyRepo) GetASurveyRepo(id string) (models.Survey, error) {
 	var data models.Survey
-	if err := repo.DB.Where("id = ?", id).First(&data).Error; err != nil {
+	if err := repo.DB.Preload("Question").Where("id = ?", id).First(&data).Error; err != nil {
 		fmt.Println(err)
 		return models.Survey{}, err
 	}
-	return data, nil
-}
-
-//UpdateSurvey :nodoc:
-func (repo *surveyRepo) UpdateSurveyRepo(data models.Survey, id string) (models.Survey, error) {
-	repo.DB.Save(&data)
 	return data, nil
 }
 

@@ -4,12 +4,12 @@ package models
 type Survey struct {
 	ID       uint       `json:"id"`
 	Title    string     `json:"title"`
-	Question []Question `gorm:"-"`
+	Question []Question `gorm:"auto_preload"`
 }
 
 //Question :nodoc:
 type Question struct {
-	ID       uint   `json:"id"`
-	IDSurvey uint   `json:id_survey`
+	ID       uint   `json:"-"`
+	SurveyID uint   `json:"-"`
 	Question string `json:"question"`
 }
